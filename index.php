@@ -13,7 +13,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     <title>لوحة تحكم المدونة</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <!-- استخدم هذا الرابط بدل assets/css/all.min.css -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-M9zPPfH2ylP6ZZf1JFCr0IVU6RJcuw3R3gF9q6N+P9S3YcK8wNzXr5r9l5c5VjJpWGL/6gX7gEplFyZrDXPC0A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-M9zPPfH2ylP6ZZf1JFCr0IVU6RJcuw3R3gF9q6N+P9S3YcK8wNzXr5r9l5c5VjJpWGL/6gX7gEplFyZrDXPC0A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -100,7 +100,9 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- سكريبتك هنا -->
     <script src="assets/js/script.js"></script>
 </body>
 </html>
