@@ -1,6 +1,4 @@
 -- إنشاء قاعدة البيانات
-CREATE DATABASE IF NOT EXISTS blog_dashboard;
-USE blog_dashboard;
 
 -- جدول المستخدمين
 CREATE TABLE IF NOT EXISTS users (
