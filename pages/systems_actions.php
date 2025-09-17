@@ -5,7 +5,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     exit("غير مسموح");
 }
 
-require 'db.php';
+require './config.php';
 
 $action = $_POST['action'] ?? '';
 
