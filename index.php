@@ -22,18 +22,27 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
         <nav class="col-md-2 d-none d-md-block bg-light sidebar">
             <div class="position-sticky pt-3">
                 <div class="text-center mb-4"><h3>لوحة التحكم</h3></div>
+                <?php $currentPage = isset($_GET['page']) ? $_GET['page'] : 'systems'; ?>
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.php?page=systems"><i class="fas fa-gavel"></i> الأنظمة والقوانين</a>
+                        <a class="nav-link <?php echo ($currentPage == 'systems') ? 'active' : ''; ?>" href="index.php?page=systems">
+                            <i class="fas fa-gavel"></i> الأنظمة والقوانين
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?page=blogs"><i class="fas fa-blog"></i> المدونات</a>
+                        <a class="nav-link <?php echo ($currentPage == 'blogs') ? 'active' : ''; ?>" href="index.php?page=blogs">
+                            <i class="fas fa-blog"></i> المدونات
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?page=users"><i class="fas fa-users"></i> المستخدمين والصلاحيات</a>
+                        <a class="nav-link <?php echo ($currentPage == 'users') ? 'active' : ''; ?>" href="index.php?page=users">
+                            <i class="fas fa-users"></i> المستخدمين والصلاحيات
+                        </a>
                     </li>
                     <li class="nav-item mt-auto">
-                        <a class="nav-link" href="logout.php"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+                        <a class="nav-link" href="logout.php">
+                            <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                        </a>
                     </li>
                 </ul>
             </div>
