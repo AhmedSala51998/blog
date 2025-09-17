@@ -101,9 +101,6 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- استخدم هذا الرابط بدل assets/js/jquery.min.js -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-3gJwYpJP9H6vbzCPh4+MCaYbz7X9PeEafmV9gS2EZ7o=" crossorigin="anonymous"></script>
-
     <script src="assets/js/script.js"></script>
 </body>
 </html>
