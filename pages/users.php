@@ -1,128 +1,82 @@
-<?php
-// الاتصال بقاعدة البيانات
-$host = "localhost";
-$dbname = "u552468652_blog_system";
-$user = "u552468652_blog_system";
-$pass = "Blog12345@#"; // عدل حسب قاعدة بياناتك
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e){
-    die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
-}
-
-// معالجة AJAX
-if(isset($_POST['action'])){
-    $action = $_POST['action'];
-
-    if($action=='getUsers'){
-        $stmt = $pdo->query("SELECT * FROM users");
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-        exit;
-    }
-
-    if($action=='addUser'){
-        $username = $_POST['username'];
-        $email = $_POST['email'];
-        $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
-        $role = $_POST['role'];
-        $status = isset($_POST['status']) && $_POST['status']=='active' ? 'active':'inactive';
-        $stmt = $pdo->prepare("INSERT INTO users (username,email,password,full_name,role,status) VALUES (?,?,?,?,?,?)");
-        $stmt->execute([$username,$email,$password,$username,$role,$status]);
-        // سجل النشاط
-        $stmt2 = $pdo->prepare("INSERT INTO activity_log (user_id,action,description) VALUES (?,?,?)");
-        $stmt2->execute([1,'add_user',"تم إضافة المستخدم $username"]);
-        echo json_encode(['status'=>'success']);
-        exit;
-    }
-
-    if($action=='deleteUser'){
-        $id = $_POST['id'];
-        $stmt = $pdo->prepare("DELETE FROM users WHERE id=?");
-        $stmt->execute([$id]);
-        $stmt2 = $pdo->prepare("INSERT INTO activity_log (user_id,action,description) VALUES (?,?,?)");
-        $stmt2->execute([1,'delete_user',"تم حذف المستخدم ID $id"]);
-        echo json_encode(['status'=>'success']);
-        exit;
-    }
-
-    if($action=='updateUser'){
-        $id = $_POST['id'];
-        $username = $_POST['username'];
-        $email = $_POST['email'];
-        $role = $_POST['role'];
-        $status = isset($_POST['status']) && $_POST['status']=='active' ? 'active':'inactive';
-        if(!empty($_POST['password'])){
-            $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("UPDATE users SET username=?,email=?,role=?,status=?,password=? WHERE id=?");
-            $stmt->execute([$username,$email,$role,$status,$password,$id]);
-        } else {
-            $stmt = $pdo->prepare("UPDATE users SET username=?,email=?,role=?,status=? WHERE id=?");
-            $stmt->execute([$username,$email,$role,$status,$id]);
-        }
-        $stmt2 = $pdo->prepare("INSERT INTO activity_log (user_id,action,description) VALUES (?,?,?)");
-        $stmt2->execute([1,'update_user',"تم تعديل المستخدم $username"]);
-        echo json_encode(['status'=>'success']);
-        exit;
-    }
-
-    if($action=='getRoles'){
-        $stmt = $pdo->query("SELECT * FROM roles");
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-        exit;
-    }
-
-    if($action=='getActivity'){
-        $stmt = $pdo->query("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 10");
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-        exit;
-    }
-}
-?>
-
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>المستخدمين والصلاحيات</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-.user-avatar {width:40px;height:40px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:10px;}
-.timeline {list-style:none;padding-left:0;}
-.timeline-item{position:relative;margin-bottom:20px;}
-.timeline-badge{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:absolute;left:-15px;top:0;}
-.timeline-card{margin-left:30px;background:#f8f9fa;padding:10px;border-radius:5px;}
-</style>
-</head>
-<body class="p-4">
-
 <div class="container">
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">المستخدمين والصلاحيات</h4>
-                    <button id="addUserBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <button id="addUserBtn" class="btn btn-primary">
                         <i class="fas fa-plus"></i> إضافة مستخدم جديد
                     </button>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover" id="usersTable">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>المستخدم</th>
                                     <th>البريد الإلكتروني</th>
                                     <th>الدور</th>
+                                    <th>تاريخ التسجيل</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar">أحمد</div>
+                                            <div class="user-info">
+                                                <p class="user-name">أحمد محمد</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>ahmed@example.com</td>
+                                    <td><span class="badge bg-primary">مدير</span></td>
+                                    <td>2023-01-15</td>
+                                    <td><span class="badge bg-success">نشط</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info edit-user-btn"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-danger delete-user-btn"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar">محمد</div>
+                                            <div class="user-info">
+                                                <p class="user-name">محمد علي</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>mohammed@example.com</td>
+                                    <td><span class="badge bg-info">كاتب</span></td>
+                                    <td>2023-02-20</td>
+                                    <td><span class="badge bg-success">نشط</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info edit-user-btn"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-danger delete-user-btn"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar">فاطمة</div>
+                                            <div class="user-info">
+                                                <p class="user-name">فاطمة أحمد</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>fatima@example.com</td>
+                                    <td><span class="badge bg-secondary">محرر</span></td>
+                                    <td>2023-03-10</td>
+                                    <td><span class="badge bg-warning">غير نشط</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info edit-user-btn"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-danger delete-user-btn"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -130,178 +84,319 @@ if(isset($_POST['action'])){
         </div>
     </div>
 
-    <!-- الأدوار والصلاحيات -->
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header"><h4>الأدوار والصلاحيات</h4></div>
-                <div class="card-body" id="rolesList"></div>
+                <div class="card-header">
+                    <h4 class="mb-0">الأدوار والصلاحيات</h4>
+                </div>
+                <div class="card-body">
+                    <div class="role-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5>مدير</h5>
+                            <div>
+                                <button class="btn btn-sm btn-info edit-role-btn"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </div>
+                        <p>صلاحيات كاملة على النظام</p>
+                        <div class="permissions">
+                            <span class="badge bg-success me-1">عرض الأنظمة</span>
+                            <span class="badge bg-success me-1">إضافة أنظمة</span>
+                            <span class="badge bg-success me-1">تعديل الأنظمة</span>
+                            <span class="badge bg-success me-1">حذف الأنظمة</span>
+                            <span class="badge bg-success me-1">عرض المدونات</span>
+                            <span class="badge bg-success me-1">إضافة مدونات</span>
+                            <span class="badge bg-success me-1">تعديل المدونات</span>
+                            <span class="badge bg-success me-1">حذف المدونات</span>
+                            <span class="badge bg-success me-1">إدارة المستخدمين</span>
+                        </div>
+                    </div>
+
+                    <div class="role-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5>كاتب</h5>
+                            <div>
+                                <button class="btn btn-sm btn-info edit-role-btn"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </div>
+                        <p>يمكنه إنشاء وتعديل ونشر المدونات</p>
+                        <div class="permissions">
+                            <span class="badge bg-success me-1">عرض الأنظمة</span>
+                            <span class="badge bg-light text-dark me-1">إضافة أنظمة</span>
+                            <span class="badge bg-light text-dark me-1">تعديل الأنظمة</span>
+                            <span class="badge bg-light text-dark me-1">حذف الأنظمة</span>
+                            <span class="badge bg-success me-1">عرض المدونات</span>
+                            <span class="badge bg-success me-1">إضافة مدونات</span>
+                            <span class="badge bg-success me-1">تعديل المدونات</span>
+                            <span class="badge bg-success me-1">حذف المدونات</span>
+                            <span class="badge bg-light text-dark me-1">إدارة المستخدمين</span>
+                        </div>
+                    </div>
+
+                    <div class="role-item">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5>محرر</h5>
+                            <div>
+                                <button class="btn btn-sm btn-info edit-role-btn"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </div>
+                        <p>يمكنه عرض وتعديل المدونات المعينة له فقط</p>
+                        <div class="permissions">
+                            <span class="badge bg-success me-1">عرض الأنظمة</span>
+                            <span class="badge bg-light text-dark me-1">إضافة أنظمة</span>
+                            <span class="badge bg-light text-dark me-1">تعديل الأنظمة</span>
+                            <span class="badge bg-light text-dark me-1">حذف الأنظمة</span>
+                            <span class="badge bg-success me-1">عرض المدونات</span>
+                            <span class="badge bg-light text-dark me-1">إضافة مدونات</span>
+                            <span class="badge bg-success me-1">تعديل المدونات</span>
+                            <span class="badge bg-light text-dark me-1">حذف المدونات</span>
+                            <span class="badge bg-light text-dark me-1">إدارة المستخدمين</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header"><h4>سجل النشاطات</h4></div>
-                <div class="card-body" id="activityLog"></div>
+                <div class="card-header">
+                    <h4 class="mb-0">سجل النشاطات</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="timeline">
+                        <li class="timeline-item">
+                            <div class="timeline-badge"><i class="fas fa-user-plus text-primary"></i></div>
+                            <div class="timeline-card">
+                                <div class="timeline-head">
+                                    <span>إضافة مستخدم جديد</span>
+                                    <small class="text-muted">منذ 10 دقائق</small>
+                                </div>
+                                <div class="timeline-body">
+                                    قام <strong>أحمد محمد</strong> بإضافة مستخدم جديد: <strong>خالد سالم</strong>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="timeline-item">
+                            <div class="timeline-badge"><i class="fas fa-file-alt text-success"></i></div>
+                            <div class="timeline-card">
+                                <div class="timeline-head">
+                                    <span>نشر مدونة جديدة</span>
+                                    <small class="text-muted">منذ ساعة</small>
+                                </div>
+                                <div class="timeline-body">
+                                    قام <strong>محمد علي</strong> بنشر مدونة جديدة: <strong>أنظمة العمل الجديدة</strong>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="timeline-item">
+                            <div class="timeline-badge"><i class="fas fa-edit text-warning"></i></div>
+                            <div class="timeline-card">
+                                <div class="timeline-head">
+                                    <span>تعديل نظام</span>
+                                    <small class="text-muted">منذ 3 ساعات</small>
+                                </div>
+                                <div class="timeline-body">
+                                    قام <strong>أحمد محمد</strong> بتعديل نظام: <strong>نظام العمل</strong>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="timeline-item">
+                            <div class="timeline-badge"><i class="fas fa-user-times text-danger"></i></div>
+                            <div class="timeline-card">
+                                <div class="timeline-head">
+                                    <span>حذف مستخدم</span>
+                                    <small class="text-muted">منذ يوم</small>
+                                </div>
+                                <div class="timeline-body">
+                                    قام <strong>أحمد محمد</strong> بحذف المستخدم: <strong>يوسف خالد</strong>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal إضافة مستخدم -->
-<div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
-<div class="modal-dialog"><div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title">إضافة مستخدم جديد</h5>
-<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- نافذة منبثقة لإضافة مستخدم جديد -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">إضافة مستخدم جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">اسم المستخدم</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">البريد الإلكتروني</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">كلمة المرور</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">تأكيد كلمة المرور</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label">الدور</label>
+                        <select class="form-select" id="role" required>
+                            <option value="" selected disabled>اختر دور</option>
+                            <option value="admin">مدير</option>
+                            <option value="writer">كاتب</option>
+                            <option value="editor">محرر</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="activeStatus" checked>
+                        <label class="form-check-label" for="activeStatus">حساب نشط</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="saveUserBtn">حفظ المستخدم</button>
+            </div>
+        </div>
+    </div>
 </div>
-<div class="modal-body">
-<form id="addUserForm">
-<div class="mb-3"><label>اسم المستخدم</label><input type="text" class="form-control" id="username" required></div>
-<div class="mb-3"><label>البريد الإلكتروني</label><input type="email" class="form-control" id="email" required></div>
-<div class="mb-3"><label>كلمة المرور</label><input type="password" class="form-control" id="password" required></div>
-<div class="mb-3"><label>تأكيد كلمة المرور</label><input type="password" class="form-control" id="confirmPassword" required></div>
-<div class="mb-3"><label>الدور</label>
-<select class="form-select" id="role" required>
-<option value="" disabled selected>اختر دور</option>
-<option value="admin">مدير</option>
-<option value="writer">كاتب</option>
-<option value="editor">محرر</option>
-</select></div>
-<div class="mb-3 form-check"><input type="checkbox" class="form-check-input" id="activeStatus" checked><label class="form-check-label">حساب نشط</label></div>
-</form>
+
+<!-- نافذة منبثقة لتعديل المستخدم -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">تعديل المستخدم</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="userId">
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">اسم المستخدم</label>
+                        <input type="text" class="form-control" id="editUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">البريد الإلكتروني</label>
+                        <input type="email" class="form-control" id="editEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">كلمة المرور (اتركه فارغاً إذا لم ترد تغييرها)</label>
+                        <input type="password" class="form-control" id="editPassword">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRole" class="form-label">الدور</label>
+                        <select class="form-select" id="editRole" required>
+                            <option value="admin">مدير</option>
+                            <option value="writer">كاتب</option>
+                            <option value="editor">محرر</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="editActiveStatus">
+                        <label class="form-check-label" for="editActiveStatus">حساب نشط</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="updateUserBtn">تحديث المستخدم</button>
+            </div>
+        </div>
+    </div>
 </div>
-<div class="modal-footer">
-<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-<button type="button" class="btn btn-primary" id="saveUserBtn">حفظ المستخدم</button>
+
+<!-- نافذة منبثقة لتعديل الدور -->
+<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editRoleModalLabel">تعديل صلاحيات الدور</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editRoleForm">
+                    <input type="hidden" id="roleId">
+                    <div class="mb-3">
+                        <label for="roleName" class="form-label">اسم الدور</label>
+                        <input type="text" class="form-control" id="roleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roleDescription" class="form-label">وصف الدور</label>
+                        <textarea class="form-control" id="roleDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الصلاحيات</label>
+                        <div class="permissions-list">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permViewSystems">
+                                <label class="form-check-label" for="permViewSystems">
+                                    عرض الأنظمة
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permAddSystems">
+                                <label class="form-check-label" for="permAddSystems">
+                                    إضافة أنظمة
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permEditSystems">
+                                <label class="form-check-label" for="permEditSystems">
+                                    تعديل الأنظمة
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permDeleteSystems">
+                                <label class="form-check-label" for="permDeleteSystems">
+                                    حذف الأنظمة
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permViewBlogs">
+                                <label class="form-check-label" for="permViewBlogs">
+                                    عرض المدونات
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permAddBlogs">
+                                <label class="form-check-label" for="permAddBlogs">
+                                    إضافة مدونات
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permEditBlogs">
+                                <label class="form-check-label" for="permEditBlogs">
+                                    تعديل المدونات
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permDeleteBlogs">
+                                <label class="form-check-label" for="permDeleteBlogs">
+                                    حذف المدونات
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="permManageUsers">
+                                <label class="form-check-label" for="permManageUsers">
+                                    إدارة المستخدمين
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="updateRoleBtn">تحديث الدور</button>
+            </div>
+        </div>
+    </div>
 </div>
-</div></div></div>
-
-<!-- Modal تعديل مستخدم -->
-<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
-<div class="modal-dialog"><div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title">تعديل المستخدم</h5>
-<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
-<div class="modal-body">
-<form id="editUserForm">
-<input type="hidden" id="userId">
-<div class="mb-3"><label>اسم المستخدم</label><input type="text" class="form-control" id="editUsername" required></div>
-<div class="mb-3"><label>البريد الإلكتروني</label><input type="email" class="form-control" id="editEmail" required></div>
-<div class="mb-3"><label>كلمة المرور (فارغ إذا لا تغيير)</label><input type="password" class="form-control" id="editPassword"></div>
-<div class="mb-3"><label>الدور</label>
-<select class="form-select" id="editRole">
-<option value="admin">مدير</option>
-<option value="writer">كاتب</option>
-<option value="editor">محرر</option>
-</select></div>
-<div class="mb-3 form-check"><input type="checkbox" class="form-check-input" id="editActiveStatus"><label class="form-check-label">حساب نشط</label></div>
-</form>
-</div>
-<div class="modal-footer">
-<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-<button type="button" class="btn btn-primary" id="updateUserBtn">تحديث المستخدم</button>
-</div>
-</div></div></div>
-
-<script>
-// تحميل المستخدمين
-function loadUsers(){
-    $.post('users_dashboard.php',{action:'getUsers'}, function(data){
-        let tbody = '';
-        data.forEach(u=>{
-            tbody += `<tr data-id="${u.id}">
-                <td>${u.full_name}</td>
-                <td>${u.email}</td>
-                <td>${u.role}</td>
-                <td>${u.status}</td>
-                <td>
-                <button class="btn btn-sm btn-info edit-user-btn">تعديل</button>
-                <button class="btn btn-sm btn-danger delete-user-btn">حذف</button>
-                </td></tr>`;
-        });
-        $('#usersTable tbody').html(tbody);
-    },'json');
-}
-
-// تحميل الأدوار
-function loadRoles(){
-    $.post('users_dashboard.php',{action:'getRoles'}, function(data){
-        let html='';
-        data.forEach(r=>{
-            html+=`<div class="role-item mb-3"><h5>${r.name}</h5><p>${r.description}</p></div>`;
-        });
-        $('#rolesList').html(html);
-    },'json');
-}
-
-// تحميل سجل النشاط
-function loadActivity(){
-    $.post('users_dashboard.php',{action:'getActivity'}, function(data){
-        let html='<ul class="timeline">';
-        data.forEach(a=>{
-            html+=`<li class="timeline-item"><div class="timeline-card">${a.action} - ${a.description}</div></li>`;
-        });
-        html+='</ul>';
-        $('#activityLog').html(html);
-    },'json');
-}
-
-$(document).ready(function(){
-    loadUsers();
-    loadRoles();
-    loadActivity();
-
-    // إضافة مستخدم
-    $('#saveUserBtn').click(function(){
-        if($('#password').val() != $('#confirmPassword').val()){alert('كلمة المرور غير متطابقة'); return;}
-        $.post('users_dashboard.php',{
-            action:'addUser',
-            username:$('#username').val(),
-            email:$('#email').val(),
-            password:$('#password').val(),
-            role:$('#role').val(),
-            status:$('#activeStatus').is(':checked')?'active':'inactive'
-        }, function(res){
-            if(res.status=='success'){loadUsers(); $('#addUserModal').modal('hide');}
-        },'json');
-    });
-
-    // حذف مستخدم
-    $(document).on('click','.delete-user-btn',function(){
-        if(!confirm('هل تريد الحذف؟')) return;
-        let id = $(this).closest('tr').data('id');
-        $.post('users_dashboard.php',{action:'deleteUser',id:id}, function(res){
-            if(res.status=='success') loadUsers();
-        },'json');
-    });
-
-    // فتح تعديل مستخدم
-    $(document).on('click','.edit-user-btn',function(){
-        let row=$(this).closest('tr');
-        $('#userId').val(row.data('id'));
-        $('#editUsername').val(row.find('td:eq(0)').text());
-        $('#editEmail').val(row.find('td:eq(1)').text());
-        $('#editRole').val(row.find('td:eq(2)').text());
-        $('#editActiveStatus').prop('checked', row.find('td:eq(3)').text()=='active');
-        $('#editUserModal').modal('show');
-    });
-
-    // تحديث مستخدم
-    $('#updateUserBtn').click(function(){
-        $.post('users_dashboard.php',{
-            action:'updateUser',
-            id:$('#userId').val(),
-            username:$('#editUsername').val(),
-            email:$('#editEmail').val(),
-            password:$('#editPassword').val(),
-            role:$('#editRole').val(),
-            status:$('#editActiveStatus').is(':checked')?'active':'inactive'
-        }, function(res){
-            if(res.status=='success'){loadUsers(); $('#editUserModal').modal('hide');}
-        },'json');
-    });
-});
-</script>
-</body>
-</html>
